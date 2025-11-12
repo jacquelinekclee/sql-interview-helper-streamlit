@@ -22,7 +22,7 @@ source env/bin/activate
 ```
 
 ### Install Necessary Packages
-Run the commands below to install the necessary packages. If at any point you get a ` No module named '<package name>'` error, run `env/bin/python -m pip install <package name>`. 
+Run the commands below to install the necessary packages. If at any point you get a `No module named '<package name>'` error, run `env/bin/python -m pip install <package name>`. 
 
 ```sh
 env/bin/python -m pip install streamlit
@@ -45,4 +45,4 @@ env/bin/python -m streamlit run app.py
 SQL exercises are sourced from [w3resource](https://www.w3resource.com/index.php). 
 
 [share_badge]: https://static.streamlit.io/badges/streamlit_badge_black_white.svg
-[share_link]: https://share.streamlit.io
+[share_link]: https://sql-interview-practice.streamlit.app/
