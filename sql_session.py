@@ -1,7 +1,6 @@
 import requests
 from bs4 import BeautifulSoup 
 import numpy as np
-import openai
 
 class SQLSession:
     
@@ -99,28 +98,4 @@ class SQLSession:
             num_tables += 1
         results = {'prompt':prompt, 'solution':solution, 'tables':table_strs}
         return results
- 
-    def openai_api_call(self, openai_api_key, user_input, results):
-        '''
-        web scrape the SQL exercise info from w3resource, parse the html,
-        and format the output
-
-        Args:
-            openai_api_key (str): user's OpenAI API key
-            user_input (str): user's SQL query
-            results (dict): formatted output from w3resource with exercise prompt,
-                            example solution, and tables
-
-        Returns:
-            Completion: OpenAI Completion object with model output
-        '''
-        openai.api_key = openai_api_key
-        sol = results['solution']
-        prompt = f'Solution SQL Query:\n{sol}\nInput SQL Query:{user_input}\nAnswer:\n'
-        messages = [{"role": "developer", "content": SQLSession.PROMPT}, 
-                    {"role": "user", "content": prompt}]
-        completion = openai.chat.completions.create(model="gpt-5-nano-2025-08-07", 
-                                                    messages=messages)
-        self.total_questions_completed += 1
-        return completion
-        
+       

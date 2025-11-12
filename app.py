@@ -37,9 +37,9 @@ sql_topics = ('Retrieve data from tables',
 
 try_exercise = False
 
-session_state_variables = ['topic_selected', 'use_openai', 'exercise_returned',
+session_state_variables = ['topic_selected', 'exercise_returned',
                            'sql_instance', 'results', 'user_query_submitted', 
-                           'try_again', 'evaluated', 'openai_api_key']
+                           'try_again', 'evaluated']
 
 # Initialize session state
 def initialize_session_state(vars):
@@ -55,18 +55,12 @@ def initialize_session_state(vars):
 
 initialize_session_state(session_state_variables)
 
-# user chooses topic and whether to use OpenAI
-with st.form("topic_and_api_key"):
-    checkbox_message = "Use OpenAI to evaluate your SQL? If so, please ensure\
-                        you've provided your OpenAI key."
-    st.session_state['use_openai'] = st.checkbox(checkbox_message)
+# user chooses topic
+with st.form("topic"):
     # choose topic
     topic_select_message = "Choose the topic you want to practice:"
     sql_topic = st.selectbox(topic_select_message, sql_topics, index=None, 
                              placeholder = "Choose a topic", key="topic_choice")
-    # initialize api key if user wants to use theirs
-    if st.session_state['use_openai']:
-        st.session_state['openai_api_key'] = os.getenv("API_KEY")
     if st.form_submit_button("Submit topic"):
         st.session_state['topic_selected'] = True
 
@@ -108,18 +102,7 @@ if st.session_state['exercise_returned']:
             final_user_sql_query = user_sql_query[len(input_instructions):].strip()
             st.session_state['evaluated'] = True
             results = st.session_state['results']
-            if st.session_state['use_openai']:
-                results = st.session_state['results']
-                with st.spinner("GPT evaluation in progress..."):
-                    # call openai api
-                    completion = st.session_state['sql_instance'].openai_api_call(
-                        st.session_state['openai_api_key'], 
-                        final_user_sql_query, results
-                        )
-                gpt_feedback = completion.choices[0].message.content
-                st.write("GPT Feedback:")
-                st.write(gpt_feedback)
-            # show example solution whether or not openai api was called
+            # show example solution 
             st.write("Example Solution:")
             st.code(results['solution'], language = 'sql')
     col1, col2 = st.columns(2)
