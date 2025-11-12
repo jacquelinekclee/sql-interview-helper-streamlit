@@ -1,10 +1,6 @@
 import streamlit as st
-import os
 from sql_session import *
-from dotenv import load_dotenv
 from streamlit_ace import st_ace
-
-load_dotenv()
 
 st.title("SQL Interview Helper")
 with st.sidebar:
