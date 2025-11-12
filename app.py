@@ -1,0 +1,120 @@
+import streamlit as st
+import os
+from sql_session import *
+from dotenv import load_dotenv
+from streamlit_ace import st_ace
+
+load_dotenv()
+
+st.title("SQL Interview Helper")
+with st.sidebar:
+    st.link_button("View the GitHub repository", "https://github.com/jacquelinekclee", icon="📁")
+    st.link_button("View my portfolio", "https://jacquelinekclee.github.io/", icon = "👩🏻‍💻")
+    st.link_button("Connect with me on LinkedIn", "https://jacquelinekclee.github.io/", icon = "🤝")
+
+def clear_new_exercise():
+    st.session_state.topic_choice = None
+    st.session_state['user_sql_query'] = None
+    st.session_state['exercise_returned'] = False
+    st.session_state['topic_selected'] = False
+
+def clear_try_again():
+    st.session_state['user_sql_query'] = None
+
+sql_topics = ('Retrieve data from tables',
+              'Boolean and Relational Operators',
+              'Wildcard and Special operators',
+              'Aggregate Functions',
+              'Formatting query output',
+              'SQL JOINS')
+
+try_exercise = False
+
+session_state_variables = ['topic_selected', 'use_openai', 'exercise_returned',
+                           'sql_instance', 'results', 'user_query_submitted', 
+                           'try_again', 'evaluated', 'openai_api_key']
+
+# Initialize session state
+def initialize_session_state(vars):
+    '''
+    iterate through provided variables and initialize them as None if
+    they don't exist
+    '''
+    for var in vars:
+        if var not in st.session_state:
+            st.session_state[var] = None
+
+initialize_session_state(session_state_variables)
+
+with st.form("topic_and_api_key"):
+    checkbox_message = "Use OpenAI to evaluate your SQL? If so, please ensure\
+                        you've provided your OpenAI key."
+    st.session_state['use_openai'] = st.checkbox(checkbox_message)
+    # choose topic
+    topic_select_message = "Choose the topic you want to practice:"
+    sql_topic = st.selectbox(topic_select_message, sql_topics, index=None, 
+                             placeholder = "Choose a topic", key="topic_choice")
+    # initialize api key if user wants to use theirs
+    if st.session_state['use_openai']:
+        st.session_state['openai_api_key'] = os.getenv("API_KEY")
+    if st.form_submit_button("Submit topic"):
+        st.session_state['topic_selected'] = True
+
+# get SQL exercise details
+if st.session_state['topic_selected'] and not st.session_state['exercise_returned']:
+    if not st.session_state['sql_instance']:
+        sql_session = SQLSession(sql_topic)
+        st.session_state['sql_instance'] = sql_session
+    else:
+        sql_session = st.session_state['sql_instance']
+    results = sql_session.get_sql_exercise(sql_topic)
+    st.session_state['results'] = results
+    st.session_state['exercise_returned'] = True
+
+# display SQL exercise details 
+if st.session_state['exercise_returned']:   
+    with st.form("exercise_details"):
+        st.write(st.session_state['use_openai'])
+        st.write("SQL Question:")
+        st.write(st.session_state['results']['prompt'])
+        sample_tables_message = "See sample table(s) below. Be sure to scroll \
+            up/down and left/right if needed:"
+        st.write(sample_tables_message)
+        tables = st.session_state['results']['tables']
+        for table in tables:
+            st.write(table)
+            st.html(tables[table])
+        input_instructions = "--Click the Apply button once completed.\n--Then, click Evaluate.\n"
+        user_sql_query = st_ace(value = input_instructions,
+                                placeholder = "Enter your SQL query here",
+                                language = "sql", theme = "monokai", min_lines = 5,
+                                key = "user_sql_query")
+        if user_sql_query:
+            st.session_state['user_query_submitted'] = True
+        evaluate = st.form_submit_button("Evaluate?")
+        if evaluate:
+            final_user_sql_query = user_sql_query[len(input_instructions):].strip()
+            st.session_state['evaluated'] = True
+            results = st.session_state['results']
+            if st.session_state['use_openai']:
+                results = st.session_state['results']
+                with st.spinner("GPT evaluation in progress..."):
+                    # call openai api
+                    completion = st.session_state['sql_instance'].openai_api_call(
+                        st.session_state['openai_api_key'], final_user_sql_query, results
+                        )
+                print(completion.choices[0].message)
+                gpt_feedback = completion.choices[0].message.content
+                print(gpt_feedback)
+                st.write("GPT Feedback:")
+                st.write(gpt_feedback)
+            # only show example solution if no openai api key
+            st.write("Example Solution:")
+            st.code(results['solution'], language = 'sql')
+    col1, col2 = st.columns(2)
+    with col1:
+        clear = st.button("Try a new exercise", on_click=clear_new_exercise)
+    # only show try again button if evaluation/solution was shown
+    if st.session_state['evaluated']:
+        with col2:
+            try_again = st.button("Try again?", on_click=clear_try_again)
