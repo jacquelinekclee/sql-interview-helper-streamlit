@@ -1,0 +1,5 @@
+streamlit
+numpy
+bs4
+requests
+streamlit_ace
