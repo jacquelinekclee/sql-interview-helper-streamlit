@@ -13,12 +13,19 @@ with st.sidebar:
     st.link_button("Connect with me on LinkedIn", "https://jacquelinekclee.github.io/", icon = "🤝")
 
 def clear_new_exercise():
+    '''
+    reset session state for choosing new SQL topic/exercise. maintains SQL session.
+    '''
     st.session_state.topic_choice = None
     st.session_state['user_sql_query'] = None
     st.session_state['exercise_returned'] = False
     st.session_state['topic_selected'] = False
 
 def clear_try_again():
+    '''
+    clear user SQL query and feedback from session state while maintaining 
+    original exercise
+    '''
     st.session_state['user_sql_query'] = None
 
 sql_topics = ('Retrieve data from tables',
@@ -39,6 +46,8 @@ def initialize_session_state(vars):
     '''
     iterate through provided variables and initialize them as None if
     they don't exist
+    Args:
+        vars (list): list of strings with session state variable names
     '''
     for var in vars:
         if var not in st.session_state:
@@ -46,6 +55,7 @@ def initialize_session_state(vars):
 
 initialize_session_state(session_state_variables)
 
+# user chooses topic and whether to use OpenAI
 with st.form("topic_and_api_key"):
     checkbox_message = "Use OpenAI to evaluate your SQL? If so, please ensure\
                         you've provided your OpenAI key."
@@ -62,6 +72,7 @@ with st.form("topic_and_api_key"):
 
 # get SQL exercise details
 if st.session_state['topic_selected'] and not st.session_state['exercise_returned']:
+    # create new SQL session if needed
     if not st.session_state['sql_instance']:
         sql_session = SQLSession(sql_topic)
         st.session_state['sql_instance'] = sql_session
@@ -74,9 +85,9 @@ if st.session_state['topic_selected'] and not st.session_state['exercise_returne
 # display SQL exercise details 
 if st.session_state['exercise_returned']:   
     with st.form("exercise_details"):
-        st.write(st.session_state['use_openai'])
         st.write("SQL Question:")
         st.write(st.session_state['results']['prompt'])
+        # display sample tables
         sample_tables_message = "See sample table(s) below. Be sure to scroll \
             up/down and left/right if needed:"
         st.write(sample_tables_message)
@@ -84,6 +95,7 @@ if st.session_state['exercise_returned']:
         for table in tables:
             st.write(table)
             st.html(tables[table])
+        # format code editor for user 
         input_instructions = "--Click the Apply button once completed.\n--Then, click Evaluate.\n"
         user_sql_query = st_ace(value = input_instructions,
                                 placeholder = "Enter your SQL query here",
@@ -101,14 +113,13 @@ if st.session_state['exercise_returned']:
                 with st.spinner("GPT evaluation in progress..."):
                     # call openai api
                     completion = st.session_state['sql_instance'].openai_api_call(
-                        st.session_state['openai_api_key'], final_user_sql_query, results
+                        st.session_state['openai_api_key'], 
+                        final_user_sql_query, results
                         )
-                print(completion.choices[0].message)
                 gpt_feedback = completion.choices[0].message.content
-                print(gpt_feedback)
                 st.write("GPT Feedback:")
                 st.write(gpt_feedback)
-            # only show example solution if no openai api key
+            # show example solution whether or not openai api was called
             st.write("Example Solution:")
             st.code(results['solution'], language = 'sql')
     col1, col2 = st.columns(2)

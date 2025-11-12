@@ -18,22 +18,47 @@ class SQLSession:
         PROMPT = f.read()
     
     def __init__(self, topic, new_user = True):
+        '''
+        constructor for SQL session. initializes question tracker to avoid
+        repeat questions
+
+        Args:
+            topic (str): user's choice for SQL topic to practice
+        '''
         self.current_topic = tuple(SQLSession.w3_sql_topic_urls.keys()).index(topic)
+        # ensure repeat questions aren't shown for duration of session
         self.question_tracker = {topic:set() for topic in SQLSession.w3_sql_topics}
         self.total_questions_completed = 0
         self.current_topic = 0
         self.current_q_num = 0
-        self.current_results = ''
         self.is_new_user = new_user
-        # self.run_session(0)
     
     def get_sql_exercise(self, topic):
+        '''
+        uses methods below to get SQL exercise info
+        Args:
+            topic (str): user's choice for SQL topic to practice
+        Returns:
+            dict: parsed results including:
+                prompt:exercise question
+                solution:provided example solution
+                tables:{table name:table in html string}
+        '''
         self.is_new_user = False
         exercise_url = self.get_sql_exercise_url(topic)
         results = self.get_sql_exercise_info(exercise_url)
         return results
     
     def get_sql_exercise_url(self, topic):
+        '''
+        randomly choose a exercise number and return url for randomly
+        selected SQL exercise
+        Args:
+            topic (str): user's choice for SQL topic to practice
+
+        Returns:
+            str: w3resource url for selected SQL topic and randomly chosen exercise
+        '''
         url, q_nums = SQLSession.w3_sql_topic_urls[topic]
         completed = self.question_tracker[topic]
         q_nums_not_done = set(q_nums) - completed
@@ -45,6 +70,19 @@ class SQLSession:
         return url.format(random_choice)
 
     def get_sql_exercise_info(self, exercise_url):
+        '''
+        web scrape the SQL exercise info from w3resource, parse the html,
+        and format the output
+
+        Args:
+            exercise_url (str): w3resource url for selected SQL topic and randomly chosen exercise
+
+        Returns:
+            dict: parsed results including:
+                prompt:exercise question
+                solution:provided example solution
+                tables:{table name:table in html string}
+        '''
         req_response = requests.get(exercise_url, timeout=5)
         html_content = BeautifulSoup(req_response.content, "html.parser")
         paragraphs = html_content.find_all('p')
@@ -60,18 +98,29 @@ class SQLSession:
             table_strs[table_name] = str(table)
             num_tables += 1
         results = {'prompt':prompt, 'solution':solution, 'tables':table_strs}
-        self.current_results = results
         return results
  
     def openai_api_call(self, openai_api_key, user_input, results):
+        '''
+        web scrape the SQL exercise info from w3resource, parse the html,
+        and format the output
+
+        Args:
+            openai_api_key (str): user's OpenAI API key
+            user_input (str): user's SQL query
+            results (dict): formatted output from w3resource with exercise prompt,
+                            example solution, and tables
+
+        Returns:
+            Completion: OpenAI Completion object with model output
+        '''
         openai.api_key = openai_api_key
         sol = results['solution']
         prompt = f'Solution SQL Query:\n{sol}\nInput SQL Query:{user_input}\nAnswer:\n'
         messages = [{"role": "developer", "content": SQLSession.PROMPT}, 
                     {"role": "user", "content": prompt}]
         completion = openai.chat.completions.create(model="gpt-5-nano-2025-08-07", 
-                                                    messages=messages, 
-                                                    max_completion_tokens=1000)
+                                                    messages=messages)
         self.total_questions_completed += 1
         return completion
         
